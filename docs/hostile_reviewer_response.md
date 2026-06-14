@@ -1,26 +1,29 @@
-        # Hostile Reviewer Response
+# Hostile Reviewer Response
 
-        Paper: 75 Deformable Memory Under Action
+## Reviewer Claim
 
-        ## Strongest Technical Threats
-        - Learning Language-Conditioned Deformable Object Manipulation with Graph Dynamics (2023)
-- Action-conditional implicit visual dynamics for deformable object manipulation (2024)
-- Visual object detection with deformable part models (2013)
-- Learning Foresightful Dense Visual Affordance for Deformable Object Manipulation (2023)
-- Learning Dynamic Compact Memory Embedding for Deformable Visual Object Tracking (2024)
-- Sim-to-Real Transfer for Visual Reinforcement Learning of Deformable Object Manipulation for Robot-Assisted Surgery (2023)
-- Latent Space Roadmap for Visual Action Planning of Deformable and Rigid Object Manipulation (2020)
-- Learning visual-based deformable object rearrangement with local graph neural networks (2023)
+Better latent memory estimation is not enough; the manipulation policy must improve.
 
-        ## ICLR Main Response
-        A hostile ICLR reviewer would be correct to reject this as a main-conference submission. The v2 paper has reproducible synthetic evidence and careful limitations, but it does not contain the real robot, high-fidelity simulator, learned model, or manual related-work depth needed for the ICLR main track.
+## Evidence-Based Response
 
-        ## Honest Action
-        The paper is marked `KILL_ARCHIVE`. This avoids converting a generated workshop-style idea into an overstated main-conference claim.
+Correct. `action_conditioned_memory` reduces hidden-memory error relative to `visible_state_mpc`, but closed-loop success is lower: 0.440 +/- 0.069 versus 0.607 +/- 0.047.
 
-        ## What Would Be Needed To Revive
-        - Real robot or high-fidelity benchmark experiments.
-        - Implemented model and baselines, not synthetic probability tables.
-        - Manual full-paper related-work audit.
-        - Paper-specific writing and figures.
-        - Evidence that the core mechanism is learned and useful under deployment shift.
+## Reviewer Claim
+
+Diagnostic probing might damage deformable objects.
+
+## Evidence-Based Response
+
+Correct. The proposed method has damage rate 0.524 on `combined_memory_stress`, while visible-state MPC has 0.226. Negative cases are dominated by diagnostic branch pulls causing excessive stretch or fixture snags.
+
+## Reviewer Claim
+
+The ablation should show that diagnostic probes matter positively.
+
+## Evidence-Based Response
+
+It shows the opposite. `action_conditioned_no_diagnostic_probes` reaches 0.554 +/- 0.050 success, above the full ablated action-conditioned variant at 0.375 +/- 0.107.
+
+## Terminal Response
+
+We accept the rejection. The correct action is archive, not rhetorical strengthening.

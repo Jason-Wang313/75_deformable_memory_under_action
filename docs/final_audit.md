@@ -1,12 +1,33 @@
 # Final Audit
 
-1. Chosen thesis: Deformable Memory Under Action explores `Model deformable-object memory as action-conditioned hidden state, not visual appearance.` for deformable object manipulation.
-2. ICLR-main decision: KILL_ARCHIVE.
-3. Submission-hardening version: v3.
-4. Reason: synthetic-only, template-generated evidence cannot support ICLR main-conference robotics claims.
-5. Closest hostile prior work: see `docs/hostile_prior_work.md`, `docs/hostile_prior_work_100_cards.csv`, and `docs/hostile_reviewer_response.md`.
-6. Reproducibility: synthetic code runs, but no real robot or high-fidelity benchmark is reproduced.
-7. Claim-validity status: main-conference claims killed; archive memo retained.
-8. Exact Downloads PDF path: `C:/Users/wangz/Downloads/75.pdf`
-9. GitHub URL: https://github.com/Jason-Wang313/75_deformable_memory_under_action
-10. Confirmation: no visible Desktop copy was requested or made.
+Paper: 75 deformable_memory_under_action
+
+Version: v4
+
+Terminal decision: KILL_ARCHIVE
+
+## Evidence Completed
+
+- Local mass-spring deformable manipulation benchmark.
+- Seven seeds: 0 through 6.
+- Five splits and four deformable object families.
+- 2,940 main rollout rows.
+- 245 seed-level metric rows.
+- 392 ablation rollout rows.
+- 1,344 stress-sweep raw rows.
+- 12 negative cases.
+
+## Gate Result
+
+The proposed method fails the decisive gate.
+
+- `action_conditioned_memory`: 0.440 +/- 0.069 combined-memory-stress success.
+- `visible_state_mpc`: 0.607 +/- 0.047 combined-memory-stress success.
+- Paired success difference: -0.167 +/- 0.094.
+- Hidden-memory error reduction versus visible-state MPC: +0.369.
+- Mechanism-F1 difference versus visible-state MPC: +0.125.
+- Damage reduction versus visible-state MPC: -0.298, meaning more damage.
+
+## Audit Conclusion
+
+The repo is now a real negative-result artifact. It should not be submitted to ICLR main.
