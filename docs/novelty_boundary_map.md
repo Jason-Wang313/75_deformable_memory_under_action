@@ -1,13 +1,22 @@
 # Novelty Boundary Map
 
 ## Crowded Territory
-- Bigger data/model scaling.
-- New benchmark only.
-- Generic active learning or uncertainty.
-- Combining a planner with a learned policy without a new state/action object.
 
-## Claimed Boundary
-Deformable memory under action keeps action-critical alternatives explicit until a physical observation collapses them.
+- Graph dynamics for deformable object manipulation.
+- Action-conditioned visual dynamics.
+- Dense visual affordance prediction.
+- Latent-space planning roadmaps.
+- Deformable visual tracking with memory.
+- Sim-to-real deformable manipulation.
 
-## What Would Falsify The Claim
-If observed-only baselines match the adverse-mode coverage and closed-loop success of the proposed branch-aware mechanism, the paper should be revised or killed.
+## Intended Novelty
+
+The intended contribution was to preserve action-conditioned hidden material memory so visually similar deformable states with different latent strain/contact histories lead to different robot actions.
+
+## Actual Boundary After v4 Evidence
+
+The boundary is not strong enough for ICLR main. The method improves memory proxies, but the diagnostic action mechanism damages objects and loses closed-loop success to simpler visible-state and graph baselines.
+
+## Revival Boundary
+
+Revival would require a safer diagnostic policy or planner that converts hidden-memory estimates into better downstream manipulation, validated on real robots or external deformable-object benchmarks.

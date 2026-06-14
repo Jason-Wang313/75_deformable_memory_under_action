@@ -1,6 +1,8 @@
-ablation,combined_stress_mean_success,ci95_success,interpretation
-full_proposed_branch_mechanism,0.6681,0.0140,all components
-minus_branch_atlas,0.5562,0.0244,removes explicit unrealized futures
-minus_tail_risk_objective,0.5750,0.0162,uses mean predicted value only
-minus_diagnostic_probe,0.6052,0.0161,does not actively test ambiguous physical modes
-minus_failure_memory,0.6136,0.0137,does not reuse repaired beliefs
+method,split,seeds,mean_success,ci95_success,mean_shape_error,ci95_shape_error,mean_memory_error,ci95_memory_error,mean_mechanism_macro_f1,ci95_mechanism_macro_f1,mean_tail_risk,ci95_tail_risk,mean_damage_rate,ci95_damage_rate,mean_force_clip_rate,ci95_force_clip_rate,mean_diagnostic_rate,ci95_diagnostic_rate
+action_conditioned_full,combined_memory_stress,7,0.37500,0.10693,0.13581,0.00305,0.24540,0.03133,0.57143,0.09037,0.62500,0.10693,0.55357,0.07286,0.03787,0.00223,1.00000,0.00000
+action_conditioned_no_action_conditioning,combined_memory_stress,7,0.37500,0.10693,0.13581,0.00305,0.48030,0.05214,0.57143,0.09037,0.62500,0.10693,0.55357,0.07286,0.03787,0.00223,1.00000,0.00000
+action_conditioned_no_branch_memory,combined_memory_stress,7,0.39286,0.11251,0.13693,0.00335,0.24540,0.03133,0.51786,0.08332,0.60714,0.11251,0.51786,0.11251,0.03756,0.00203,0.94643,0.04950
+action_conditioned_no_contact_memory,combined_memory_stress,7,0.37500,0.10693,0.13581,0.00305,0.30816,0.03613,0.57143,0.09037,0.62500,0.10693,0.55357,0.07286,0.03787,0.00223,1.00000,0.00000
+action_conditioned_no_diagnostic_probes,combined_memory_stress,7,0.55357,0.04950,0.13957,0.00248,0.24540,0.03133,0.48214,0.06390,0.44643,0.04950,0.28571,0.10304,0.02863,0.00420,0.00000,0.00000
+action_conditioned_no_material_memory,combined_memory_stress,7,0.37500,0.10693,0.13581,0.00305,0.22413,0.03355,0.57143,0.09037,0.62500,0.10693,0.55357,0.07286,0.03787,0.00223,1.00000,0.00000
+action_conditioned_no_uncertainty_term,combined_memory_stress,7,0.37500,0.10693,0.13581,0.00305,0.24540,0.03133,0.57143,0.09037,0.62500,0.10693,0.55357,0.07286,0.03787,0.00223,1.00000,0.00000

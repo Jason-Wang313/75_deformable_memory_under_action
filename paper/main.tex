@@ -4,42 +4,116 @@
 \usepackage{hyperref}
 \usepackage{url}
 \usepackage{booktabs}
-\title{Deformable Memory Under Action: ICLR Main-Conference Gate Archive}
+\usepackage{graphicx}
+\title{Action-Conditioned Deformable Memory Does Not Improve Closed-Loop Manipulation}
 \author{Anonymous Authors}
 \begin{document}
 \maketitle
+
 \begin{abstract}
-This document is not an ICLR main-conference submission. It is the v3 main-conference gate for a generated robotics draft about deformable object manipulation. The original research bet was: Model deformable-object memory as action-conditioned hidden state, not visual appearance. After a stricter hostile review, the honest terminal decision is \textbf{KILL/ARCHIVE}. Submission-hardening version: v3.
+We rebuilt a generated robotics idea into a concrete deformable manipulation study: should a robot preserve action-conditioned hidden material memory rather than plan from current visible geometry? The v4 rebuild implements a local mass-spring benchmark with rope, cloth-strip, elastic-band, and sheet objects; hidden strain/contact memory; partial observation; material shifts; fixtures; force limits; learned history/graph/action estimators; strong planning baselines; a full-latent oracle action selector; seven random seeds; uncertainty intervals; paired statistics; ablations; stress sweeps; and negative cases. The result is negative. On the decisive \texttt{combined\_memory\_stress} split, \texttt{action\_conditioned\_memory} reaches $0.440 \pm 0.069$ closed-loop success, while the strongest non-oracle baseline, \texttt{visible\_state\_mpc}, reaches $0.607 \pm 0.047$. The paired success difference is $-0.167 \pm 0.094$. The proposed method improves hidden-memory estimation and mechanism F1, but it overuses diagnostic branch pulls and increases damage. We therefore mark the paper \textbf{KILL/ARCHIVE} for ICLR main.
 \end{abstract}
 
-\section{Gate Decision}
-The v2 paper was workshop-only. Under the active ICLR-main standard, that is insufficient. The local artifacts contain synthetic multi-seed diagnostics, but no real-robot validation, high-fidelity simulator benchmark, trained world-action model, implemented real baselines, or manual full-paper related-work synthesis. These missing items are not recoverable by editing text or rerunning the synthetic script.
+\section{Decision}
+This document is the v4 ICLR-main gate for Paper 75, \emph{Deformable Memory Under Action}. The previous version was killed because it only contained a synthetic template. The current rebuild adds a real local deformable-physics benchmark, learned estimators, implemented planning baselines, and a full-latent oracle action selector. The rejection reason has changed: evidence now exists, but it does not support the central submission claim.
 
-\section{Fatal ICLR-Main Blockers}
+\section{Hypothesis}
+The tested hypothesis is that visually similar deformable states can carry different latent strain, crease, contact, or stored-energy histories, and that action-conditioned memory should improve downstream manipulation by preserving those latent alternatives. The paper only passes the gate if the proposed method improves closed-loop success under combined memory stress while also improving latent-memory estimation, mechanism prediction, and damage/safety.
+
+\section{Benchmark}
+The benchmark simulates deformable objects as 2D mass-spring systems with damping, friction, fixtures, force limits, partial observation, and hidden material memory. Four object families are used: rope/cable, cloth strip, elastic band, and deformable sheet. Each rollout logs full hidden state, visible/imputed observations, action traces, strain energy, fixture contact, stretch, damage proxies, final shape error, mechanism labels, and task success.
+
+Five splits are evaluated: nominal visible state, hidden strain memory, occluded contact memory, material shift, and combined memory stress. The full run contains 2,940 main rollouts, 245 seed-level metric rows, 392 ablation rollouts, and 1,344 stress-sweep raw rollouts. All intervals are 95 percent confidence intervals over seed-level means.
+
+\section{Methods}
+The implemented methods are:
 \begin{itemize}
-\item Evidence is synthetic and generated from a shared batch template.
-\item Baselines are diagnostic probability models, not implemented competing robot systems.
-\item Ablations do not correspond to a trained model checkpoint.
-\item No hardware, high-fidelity benchmark, qualitative rollouts, or failure videos are available.
-\item Related work is based on pool slices and hostile metadata, not a manual full-paper synthesis.
-\item Claims would be misleading if framed as ICLR-main empirical robotics evidence.
+\item \texttt{visible\_state\_mpc}: plans from current observed/imputed keypoints.
+\item \texttt{history\_rnn\_estimator}: learned history-feature estimator for latent memory.
+\item \texttt{particle\_filter\_memory}: maintains multiple latent memory hypotheses.
+\item \texttt{graph\_dynamics\_baseline}: graph-feature dynamics estimator.
+\item \texttt{ensemble\_uncertainty\_planner}: bootstrap ensemble with uncertainty penalties.
+\item \texttt{action\_conditioned\_memory}: proposed method; action/history memory with diagnostic branch pulls.
+\item \texttt{oracle\_latent\_state}: upper bound using full hidden latent state and actual full-physics action selection.
 \end{itemize}
 
-\section{Hostile Prior-Work Pressure}
-The closest local hostile records include:
-\begin{itemize}
-\item Learning Language-Conditioned Deformable Object Manipulation with Graph Dynamics (2023)
-\item Action-conditional implicit visual dynamics for deformable object manipulation (2024)
-\item Visual object detection with deformable part models (2013)
-\item Learning Foresightful Dense Visual Affordance for Deformable Object Manipulation (2023)
-\item Learning Dynamic Compact Memory Embedding for Deformable Visual Object Tracking (2024)
-\end{itemize}
-These works make generic world models, uncertainty, model-based planning, and robot policy robustness crowded. Without real empirical evidence, the remaining novelty boundary is too weak for ICLR main.
+\section{Main Results}
+Table~\ref{tab:main} shows the decisive combined-memory-stress result. The oracle shows that the action library can solve many scenarios when the latent state and actual physics are available. The proposed method improves hidden-memory proxies, but it loses downstream success.
 
-\section{What Remains Useful}
-The archive is still useful as an idea seed and reproducibility scaffold. The synthetic code, stress-test CSVs, reviewer attacks, and novelty-boundary docs can inform a future project. The correct next step is not more paper polishing; it is new evidence: implemented models, real baselines, manual related work, and robot or high-fidelity simulator validation.
+\begin{table}[h]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lccccc}
+\toprule
+Method & Success & Shape err. & Memory err. & Mech. F1 & Damage \\
+\midrule
+\texttt{oracle\_latent\_state} & $0.798 \pm 0.060$ & 0.129 & 0.000 & 1.000 & 0.071 \\
+\texttt{visible\_state\_mpc} & $0.607 \pm 0.047$ & 0.146 & 0.585 & 0.411 & 0.226 \\
+\texttt{graph\_dynamics\_baseline} & $0.548 \pm 0.060$ & 0.143 & 0.539 & 0.411 & 0.274 \\
+\texttt{history\_rnn\_estimator} & $0.464 \pm 0.079$ & 0.136 & 0.202 & 0.446 & 0.464 \\
+\texttt{particle\_filter\_memory} & $0.464 \pm 0.060$ & 0.136 & 0.202 & 0.518 & 0.488 \\
+\texttt{ensemble\_uncertainty\_planner} & $0.452 \pm 0.060$ & 0.136 & 0.200 & 0.482 & 0.500 \\
+\texttt{action\_conditioned\_memory} & $0.440 \pm 0.069$ & 0.135 & 0.217 & 0.536 & 0.524 \\
+\bottomrule
+\end{tabular}
+\caption{Combined-memory-stress results. Success is closed-loop task success. Damage is the selected-action damage proxy rate.}
+\label{tab:main}
+\end{table}
 
-\section{Terminal Action}
-Decision: \textbf{KILL/ARCHIVE for ICLR main}. Do not submit this paper to ICLR main in the current form. Revival requires a substantially new empirical project.
+The strongest non-oracle baseline is \texttt{visible\_state\_mpc}. The paired proposed-minus-baseline success difference is $-0.167 \pm 0.094$. The proposed method reduces hidden-memory error by 0.369 and improves mechanism F1 by 0.125 relative to visible-state MPC, but worsens damage by 0.298. This fails the submission gate.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\linewidth]{../figures/deformable_memory_final_success.png}
+\caption{Combined-memory-stress closed-loop success. The proposed action-conditioned memory planner loses to visible-state MPC and graph baselines.}
+\end{figure}
+
+\section{Ablations}
+Table~\ref{tab:ablation} shows the mechanism failure. Removing diagnostic probes reaches $0.554 \pm 0.050$ success, while the full action-conditioned ablation reaches $0.375 \pm 0.107$. Diagnostic probing is not the rescue mechanism; it is the dominant damage source.
+
+\begin{table}[h]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lcccc}
+\toprule
+Ablation & Success & Shape err. & Memory err. & Damage \\
+\midrule
+\texttt{no\_diagnostic\_probes} & $0.554 \pm 0.050$ & 0.140 & 0.245 & 0.286 \\
+\texttt{no\_branch\_memory} & $0.393 \pm 0.113$ & 0.137 & 0.245 & 0.518 \\
+\texttt{full} & $0.375 \pm 0.107$ & 0.136 & 0.245 & 0.554 \\
+\texttt{no\_action\_conditioning} & $0.375 \pm 0.107$ & 0.136 & 0.480 & 0.554 \\
+\texttt{no\_contact\_memory} & $0.375 \pm 0.107$ & 0.136 & 0.308 & 0.554 \\
+\texttt{no\_material\_memory} & $0.375 \pm 0.107$ & 0.136 & 0.224 & 0.554 \\
+\texttt{no\_uncertainty\_term} & $0.375 \pm 0.107$ & 0.136 & 0.245 & 0.554 \\
+\bottomrule
+\end{tabular}
+\caption{Combined-memory-stress ablations. Removing diagnostic probes improves success, refuting the intended mechanism.}
+\label{tab:ablation}
+\end{table}
+
+\section{Stress Sweep and Negative Cases}
+Stress sweeps show the same pattern. At stress level 1.00, \texttt{action\_conditioned\_memory} reaches $0.321 \pm 0.176$ success, while \texttt{ensemble\_uncertainty\_planner} reaches $0.375 \pm 0.151$ and the oracle reaches $0.768 \pm 0.164$. The oracle gap indicates that the benchmark is solvable, but the proposed planner does not use hidden memory safely.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.82\linewidth]{../figures/deformable_memory_stress_sweep.png}
+\caption{Stress sweep success. Action-conditioned memory does not dominate under increasing deformable-memory stress.}
+\end{figure}
+
+Negative cases are dominated by \texttt{diagnostic\_branch\_pull}. Rope cases often fail through excessive stretch; cloth and sheet cases fail through fixture snags. The method estimates hidden memory better, but chooses actions that are too invasive for contact-rich deformables.
+
+\section{Related Work Pressure}
+The hostile prior-work set is crowded with graph dynamics for deformable manipulation \citep{prior1,prior8}, action-conditional visual dynamics \citep{prior2}, dense affordance learning \citep{prior4}, deformable tracking memory \citep{prior5}, sim-to-real deformable manipulation \citep{prior6}, and latent-space deformable planning \citep{prior7}. In this context, hidden-memory estimation must translate into safer and more successful manipulation. It does not in the current evidence.
+
+\section{Limitations}
+This rebuild is not a real robot paper. It lacks hardware experiments, videos, external benchmark validation, and large neural deformable dynamics checkpoints. The simulator is local and diagnostic, not a polished public benchmark. These limitations would matter even if the method won; because it loses the main downstream metric, they reinforce the archive decision.
+
+\section{Conclusion}
+Paper 75 should not be submitted to ICLR main. The v4 rebuild provides useful evidence, but the evidence is negative: action-conditioned deformable memory improves latent-state proxies without improving closed-loop deformable manipulation. The correct terminal state is \textbf{KILL/ARCHIVE}.
+
+\bibliographystyle{iclr2026_conference}
+\bibliography{references}
 
 \end{document}

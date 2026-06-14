@@ -1,4 +1,13 @@
-case,expected_behavior,observed_success,lesson
-unmodeled_hardware_damage,planner abstains or requests human inspection,0.18,branch semantics cannot repair missing actuation
-semantic_goal_ambiguity,diagnostic physical probes do not solve language ambiguity,0.31,needs a separate instruction-grounding loop
-adversarial_sensor_dropout,tail-risk objective becomes conservative,0.39,sensor-health modeling is out of scope
+seed,scenario_id,object_type,chosen_action,actual_failures,shape_error,memory_error,lesson
+0,combined_memory_stress_0_4000_rope,rope,diagnostic_branch_pull,excessive_stretch,0.16949,0.08334,action-conditioned memory estimated a branch but the selected action still failed deformable contact dynamics
+0,combined_memory_stress_0_4003_deformable_sheet,deformable_sheet,diagnostic_branch_pull,fixture_snag,0.14484,0.22152,action-conditioned memory estimated a branch but the selected action still failed deformable contact dynamics
+0,combined_memory_stress_0_4004_rope,rope,diagnostic_branch_pull,excessive_stretch,0.16997,0.47207,action-conditioned memory estimated a branch but the selected action still failed deformable contact dynamics
+0,combined_memory_stress_0_4005_cloth_strip,cloth_strip,diagnostic_branch_pull,fixture_snag,0.13568,0.01356,action-conditioned memory estimated a branch but the selected action still failed deformable contact dynamics
+0,combined_memory_stress_0_4007_deformable_sheet,deformable_sheet,diagnostic_branch_pull,fixture_snag,0.13852,0.16529,action-conditioned memory estimated a branch but the selected action still failed deformable contact dynamics
+0,combined_memory_stress_0_4008_rope,rope,diagnostic_branch_pull,excessive_stretch;occlusion_miss,0.16486,0.65418,action-conditioned memory estimated a branch but the selected action still failed deformable contact dynamics
+0,combined_memory_stress_0_4009_cloth_strip,cloth_strip,diagnostic_branch_pull,fixture_snag,0.13793,0.11726,action-conditioned memory estimated a branch but the selected action still failed deformable contact dynamics
+1,combined_memory_stress_1_4002_deformable_sheet,deformable_sheet,diagnostic_branch_pull,fixture_snag,0.14786,0.09226,action-conditioned memory estimated a branch but the selected action still failed deformable contact dynamics
+1,combined_memory_stress_1_4003_rope,rope,diagnostic_branch_pull,excessive_stretch,0.16739,0.47320,action-conditioned memory estimated a branch but the selected action still failed deformable contact dynamics
+1,combined_memory_stress_1_4004_cloth_strip,cloth_strip,diagnostic_branch_pull,shape_failure,0.15594,0.15208,action-conditioned memory estimated a branch but the selected action still failed deformable contact dynamics
+1,combined_memory_stress_1_4006_deformable_sheet,deformable_sheet,diagnostic_branch_pull,fixture_snag,0.10926,0.42718,action-conditioned memory estimated a branch but the selected action still failed deformable contact dynamics
+1,combined_memory_stress_1_4007_rope,rope,diagnostic_branch_pull,excessive_stretch;occlusion_miss,0.16611,0.21485,action-conditioned memory estimated a branch but the selected action still failed deformable contact dynamics

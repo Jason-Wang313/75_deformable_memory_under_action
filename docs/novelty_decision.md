@@ -1,7 +1,13 @@
 # Novelty Decision
 
-Chosen thesis: Deformable Memory Under Action turns the seed bet into a mechanism: Model deformable-object memory as action-conditioned hidden state, not visual appearance.
+Decision: KILL_ARCHIVE
 
-New central mechanism: Deformable memory under action keeps action-critical alternatives explicit until a physical observation collapses them.
+The v4 evidence does not support a novel ICLR-main contribution. The repository adds a real local benchmark and a useful negative result, but the proposed action-conditioned memory planner does not outperform visible-state MPC on the decisive downstream metric.
 
-Decision: proceed as a revise/workshop-strength ICLR-style draft with synthetic but runnable evidence.
+The novelty claim should be phrased only as:
+
+> A reproducible negative result showing that better deformable hidden-memory estimation can fail to improve closed-loop manipulation when diagnostic actions increase damage.
+
+It should not be phrased as:
+
+> A superior deformable object manipulation algorithm.
