@@ -27,3 +27,13 @@ It shows the opposite. `action_conditioned_no_diagnostic_probes` reaches 0.554 +
 ## Terminal Response
 
 We accept the rejection. The correct action is archive, not rhetorical strengthening.
+
+## Continuation Response 2026-06-15
+
+The hostile-reviewer position became stronger after re-audit, not weaker.
+
+- The central paired comparison remains negative: `action_conditioned_memory` minus `visible_state_mpc` is -0.167 +/- 0.094 success, with 0/7 better seeds.
+- The diagnostic-probe concern is validated by ablations: removing diagnostic probes raises success to 0.554 +/- 0.050 and lowers damage to 0.286, while the full ablated variant has 0.375 +/- 0.107 success and 0.554 damage.
+- The stress-sweep objection is also valid: the proposed method is below `ensemble_uncertainty_planner` at every stress level, including 0.321 versus 0.375 success at stress 1.00.
+
+No submission-ready framing can honestly rescue this paper without new evidence.
