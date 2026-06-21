@@ -1,20 +1,40 @@
-Paper 75 deformable_memory_under_action real deformable-physics rebuild
+Paper 75 deformable_memory_under_action expanded v5 deformable-physics rebuild
 Terminal recommendation: KILL_ARCHIVE
-Reason: action_conditioned_memory does not clear strongest non-oracle baseline visible_state_mpc decisively on combined_memory_stress (proposed=0.440, best_baseline=0.607, paired diff=-0.167+/-0.094, memory_reduction=0.369, mechanism_f1_diff=0.125, damage_reduction=-0.298).
-Rollout rows: 2940
-Seed metric rows: 245
-Ablation rows: 392
-Stress rows: 1344
-Seeds: [0, 1, 2, 3, 4, 5, 6]
-Training scenarios per split: 38
-Evaluation scenarios per split: 12
-Runtime seconds: 908.45
+Reason: action_conditioned_memory_v5 does not clear every frozen gate. Main combined_memory_stress comparison against damage_aware_visible_mpc: (proposed=0.562, best_baseline=0.589, paired diff=-0.027+/-0.052, memory_reduction=0.349, mechanism_f1_diff=0.031, damage_reduction=-0.045). Aggregate hard-regime paired diff against damage_aware_visible_mpc is -0.103+/-0.016. Fixed-risk gate: budget 0.10: v5=0.625, best=action_conditioned_memory_v5:0.625; budget 0.20: v5=0.625, best=action_conditioned_memory_v5:0.625. Ablations matching full v5: action_conditioned_v5_no_action_conditioning, action_conditioned_v5_no_damage_penalty, action_conditioned_v5_no_material_memory, action_conditioned_v5_no_safety_gate. Max-stress v5=0.583, best_non_oracle=damage_aware_visible_mpc:0.653.
+Rollout rows: 6160
+Seed metric rows: 440
+Aggregate seed rows: 88
+Ablation rows: 640
+Stress rows: 4032
+Fixed-risk rows: 6912
+Seeds: [0, 1, 2, 3, 4, 5, 6, 7]
+Training scenarios per split: 48
+Evaluation scenarios per split: 14
+Fixed-risk budgets: [0.1, 0.2, 0.3, 0.4]
+Runtime seconds: 1785.35
 
 Combined-memory-stress summary:
-oracle_latent_state success=0.79762 ci95=0.06025 shape_error=0.12923 memory_error=0.00000 mechanism_f1=1.00000 damage=0.07143
-visible_state_mpc success=0.60714 ci95=0.04667 shape_error=0.14560 memory_error=0.58546 mechanism_f1=0.41071 damage=0.22619
-graph_dynamics_baseline success=0.54762 ci95=0.06025 shape_error=0.14309 memory_error=0.53868 mechanism_f1=0.41071 damage=0.27381
-history_rnn_estimator success=0.46429 ci95=0.07855 shape_error=0.13608 memory_error=0.20188 mechanism_f1=0.44643 damage=0.46429
-particle_filter_memory success=0.46429 ci95=0.06025 shape_error=0.13614 memory_error=0.20188 mechanism_f1=0.51786 damage=0.48810
-ensemble_uncertainty_planner success=0.45238 ci95=0.06025 shape_error=0.13573 memory_error=0.19982 mechanism_f1=0.48214 damage=0.50000
-action_conditioned_memory success=0.44048 ci95=0.06869 shape_error=0.13450 memory_error=0.21692 mechanism_f1=0.53571 damage=0.52381
+oracle_latent_state success=0.82143 ci95=0.08366 shape_error=0.13041 memory_error=0.00000 calibration_error=0.00000 mechanism_f1=1.00000 damage=0.06250 force_clip=0.02411 diagnostic=0.01786
+damage_aware_visible_mpc success=0.58929 ci95=0.05766 shape_error=0.14648 memory_error=0.57811 calibration_error=0.20598 mechanism_f1=0.40625 damage=0.20536 force_clip=0.03869 diagnostic=0.00000
+visible_state_mpc success=0.58929 ci95=0.05766 shape_error=0.14648 memory_error=0.57811 calibration_error=0.20598 mechanism_f1=0.40625 damage=0.20536 force_clip=0.03869 diagnostic=0.00000
+action_conditioned_memory_v5 success=0.56250 ci95=0.06170 shape_error=0.14138 memory_error=0.22899 calibration_error=0.06526 mechanism_f1=0.43750 damage=0.25000 force_clip=0.03184 diagnostic=0.00000
+graph_dynamics_baseline success=0.53571 ci95=0.09165 shape_error=0.14267 memory_error=0.52476 calibration_error=0.21995 mechanism_f1=0.42708 damage=0.25893 force_clip=0.02872 diagnostic=0.00000
+safety_constrained_particle_filter success=0.51786 ci95=0.06344 shape_error=0.14107 memory_error=0.25565 calibration_error=0.06645 mechanism_f1=0.39062 damage=0.33036 force_clip=0.03601 diagnostic=0.44643
+robust_cem_surrogate success=0.48214 ci95=0.05766 shape_error=0.13947 memory_error=0.25546 calibration_error=0.07888 mechanism_f1=0.40625 damage=0.41964 force_clip=0.03794 diagnostic=0.78571
+action_conditioned_memory success=0.44643 ci95=0.06344 shape_error=0.13714 memory_error=0.20588 calibration_error=0.08270 mechanism_f1=0.45312 damage=0.48214 force_clip=0.03705 diagnostic=0.95536
+history_rnn_estimator success=0.43750 ci95=0.06170 shape_error=0.13745 memory_error=0.18679 calibration_error=0.11924 mechanism_f1=0.43750 damage=0.48214 force_clip=0.03750 diagnostic=0.92857
+particle_filter_memory success=0.43750 ci95=0.05573 shape_error=0.13644 memory_error=0.18679 calibration_error=0.21142 mechanism_f1=0.50000 damage=0.50000 force_clip=0.03690 diagnostic=0.96429
+ensemble_uncertainty_planner success=0.42857 ci95=0.05916 shape_error=0.13671 memory_error=0.18699 calibration_error=0.10223 mechanism_f1=0.46875 damage=0.50000 force_clip=0.03690 diagnostic=0.97321
+
+Aggregate hard-regime summary:
+oracle_latent_state success=0.86607 ci95=0.02958 memory_error=0.00000 damage=0.02678 diagnostic=0.00893
+damage_aware_visible_mpc success=0.53795 ci95=0.04309 memory_error=0.43644 damage=0.22768 diagnostic=0.00000
+visible_state_mpc success=0.53795 ci95=0.04309 memory_error=0.43644 damage=0.22768 diagnostic=0.00000
+graph_dynamics_baseline success=0.46205 ci95=0.03336 memory_error=0.38355 damage=0.24330 diagnostic=0.00000
+safety_constrained_particle_filter success=0.43973 ci95=0.03303 memory_error=0.21018 damage=0.27455 diagnostic=0.14509
+action_conditioned_memory_v5 success=0.43527 ci95=0.03558 memory_error=0.19663 damage=0.25000 diagnostic=0.00000
+robust_cem_surrogate success=0.41964 ci95=0.03102 memory_error=0.21033 damage=0.34821 diagnostic=0.49554
+history_rnn_estimator success=0.41518 ci95=0.02540 memory_error=0.17838 damage=0.45982 diagnostic=0.85714
+action_conditioned_memory success=0.40625 ci95=0.03484 memory_error=0.18669 damage=0.46875 diagnostic=0.86384
+ensemble_uncertainty_planner success=0.40179 ci95=0.02958 memory_error=0.18059 damage=0.47321 diagnostic=0.86830
+particle_filter_memory success=0.38616 ci95=0.02953 memory_error=0.17838 damage=0.50446 diagnostic=0.93750
