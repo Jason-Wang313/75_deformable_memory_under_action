@@ -18,13 +18,14 @@ from sklearn.linear_model import Ridge
 
 BASE_SEED = 229114322
 QUICK_MODE = os.getenv("PAPER75_QUICK", "0") == "1"
-SEED_COUNT = int(os.getenv("PAPER75_SEED_COUNT", "1" if QUICK_MODE else "7"))
+SEED_COUNT = int(os.getenv("PAPER75_SEED_COUNT", "1" if QUICK_MODE else "8"))
 SEEDS = list(range(SEED_COUNT))
-TRAIN_SCENARIOS = int(os.getenv("PAPER75_TRAIN_SCENARIOS", "10" if QUICK_MODE else "38"))
-EVAL_SCENARIOS = int(os.getenv("PAPER75_EVAL_SCENARIOS", "4" if QUICK_MODE else "12"))
-ABLATION_SCENARIOS = int(os.getenv("PAPER75_ABLATION_SCENARIOS", "3" if QUICK_MODE else "8"))
-STRESS_SCENARIOS = int(os.getenv("PAPER75_STRESS_SCENARIOS", "3" if QUICK_MODE else "8"))
-STEPS = int(os.getenv("PAPER75_STEPS", "44" if QUICK_MODE else "58"))
+TRAIN_SCENARIOS = int(os.getenv("PAPER75_TRAIN_SCENARIOS", "10" if QUICK_MODE else "48"))
+EVAL_SCENARIOS = int(os.getenv("PAPER75_EVAL_SCENARIOS", "4" if QUICK_MODE else "14"))
+ABLATION_SCENARIOS = int(os.getenv("PAPER75_ABLATION_SCENARIOS", "3" if QUICK_MODE else "10"))
+STRESS_SCENARIOS = int(os.getenv("PAPER75_STRESS_SCENARIOS", "3" if QUICK_MODE else "9"))
+FIXED_RISK_SCENARIOS = int(os.getenv("PAPER75_FIXED_RISK_SCENARIOS", "3" if QUICK_MODE else "8"))
+STEPS = int(os.getenv("PAPER75_STEPS", "44" if QUICK_MODE else "60"))
 DT = 0.035
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,30 +34,54 @@ FIGURES = ROOT / "figures"
 
 METHODS = [
     "visible_state_mpc",
+    "damage_aware_visible_mpc",
     "history_rnn_estimator",
     "particle_filter_memory",
+    "safety_constrained_particle_filter",
     "graph_dynamics_baseline",
     "ensemble_uncertainty_planner",
+    "robust_cem_surrogate",
     "action_conditioned_memory",
+    "action_conditioned_memory_v5",
     "oracle_latent_state",
 ]
 
 ABLATION_METHODS = [
-    "action_conditioned_full",
-    "action_conditioned_no_action_conditioning",
-    "action_conditioned_no_branch_memory",
-    "action_conditioned_no_diagnostic_probes",
-    "action_conditioned_no_material_memory",
-    "action_conditioned_no_contact_memory",
-    "action_conditioned_no_uncertainty_term",
+    "action_conditioned_v5_full",
+    "action_conditioned_v5_no_action_conditioning",
+    "action_conditioned_v5_no_branch_memory",
+    "action_conditioned_v5_no_safety_gate",
+    "action_conditioned_v5_no_diagnostic_gate",
+    "action_conditioned_v5_no_damage_penalty",
+    "action_conditioned_v5_no_material_memory",
+    "action_conditioned_v5_no_uncertainty_term",
 ]
 
 STRESS_METHODS = [
+    "visible_state_mpc",
+    "damage_aware_visible_mpc",
     "particle_filter_memory",
+    "safety_constrained_particle_filter",
     "ensemble_uncertainty_planner",
     "action_conditioned_memory",
+    "action_conditioned_memory_v5",
     "oracle_latent_state",
 ]
+
+FIXED_RISK_METHODS = [
+    "visible_state_mpc",
+    "damage_aware_visible_mpc",
+    "particle_filter_memory",
+    "safety_constrained_particle_filter",
+    "ensemble_uncertainty_planner",
+    "robust_cem_surrogate",
+    "action_conditioned_memory",
+    "action_conditioned_memory_v5",
+    "oracle_latent_state",
+]
+
+RISK_BUDGETS = [0.10, 0.20, 0.30, 0.40]
+HARD_SPLITS = ["hidden_strain_memory", "occluded_contact_memory", "material_shift", "combined_memory_stress"]
 
 ACTIONS = [
     "pull_high",
@@ -449,7 +474,7 @@ def predict_memory(cfg: DeformableConfig, models: PlannerModels, method: str, ab
         for model in models.ensemble_models
     ]
     uncertainty = float(np.std(ens))
-    if method == "visible_state_mpc":
+    if method in {"visible_state_mpc", "damage_aware_visible_mpc"}:
         return [0.0], 0.34 + abs(graph) * 0.15
     if method == "history_rnn_estimator":
         return [history], 0.20 + abs(history - graph) * 0.25
@@ -458,23 +483,34 @@ def predict_memory(cfg: DeformableConfig, models: PlannerModels, method: str, ab
     if method == "particle_filter_memory":
         spread = max(0.18, 0.65 * abs(history - graph) + 0.12)
         return [history - spread, history, history + spread], spread
+    if method == "safety_constrained_particle_filter":
+        spread = max(0.14, 0.52 * abs(history - graph) + 0.08)
+        center = 0.70 * history + 0.30 * graph
+        return [center - spread, center, center + spread], spread
     if method == "ensemble_uncertainty_planner":
         return ens, max(uncertainty, 0.08)
-    # Proposed and ablations.
+    if method == "robust_cem_surrogate":
+        center = 0.45 * action + 0.30 * graph + 0.25 * history
+        spread = max(0.10, 0.50 * uncertainty + 0.06 + 0.20 * abs(history - graph))
+        return [center - spread, center, center + spread], spread
+    # Proposed v4/v5 and ablations.
     center = 0.62 * action + 0.24 * history + 0.14 * graph
     spread = max(0.08, uncertainty + 0.06)
-    if ablation == "action_conditioned_no_action_conditioning":
+    if method == "action_conditioned_memory_v5" or (ablation is not None and ablation.startswith("action_conditioned_v5")):
+        center = 0.48 * action + 0.30 * history + 0.22 * graph
+        spread = max(0.10, 0.55 * uncertainty + 0.06 + 0.18 * abs(history - graph))
+    if ablation in {"action_conditioned_no_action_conditioning", "action_conditioned_v5_no_action_conditioning"}:
         center = graph
         spread += 0.12
-    elif ablation == "action_conditioned_no_branch_memory":
+    elif ablation in {"action_conditioned_no_branch_memory", "action_conditioned_v5_no_branch_memory"}:
         return [center], spread + 0.10
-    elif ablation == "action_conditioned_no_material_memory":
+    elif ablation in {"action_conditioned_no_material_memory", "action_conditioned_v5_no_material_memory"}:
         center = 0.50 * action + 0.50 * history
         spread += 0.08
     elif ablation == "action_conditioned_no_contact_memory":
         center = 0.70 * action
         spread += 0.08
-    if ablation == "action_conditioned_no_uncertainty_term":
+    if ablation in {"action_conditioned_no_uncertainty_term", "action_conditioned_v5_no_uncertainty_term"}:
         return [center], 0.0
     return [center - spread, center, center + spread], spread
 
@@ -660,13 +696,20 @@ def simulate(cfg: DeformableConfig, action: str, memory_estimate: float) -> Roll
     )
 
 
-def score_outcome(outcome: RolloutOutcome, uncertainty: float, allow_probe: bool) -> float:
-    probe_penalty = 0.020 * outcome.diagnostic_count if allow_probe else 0.055 * outcome.diagnostic_count
+def score_outcome(
+    outcome: RolloutOutcome,
+    uncertainty: float,
+    allow_probe: bool,
+    safety_weight: float = 1.0,
+    probe_weight: float = 1.0,
+) -> float:
+    probe_penalty = (0.020 if allow_probe else 0.055) * probe_weight * outcome.diagnostic_count
     return (
         1.15 * outcome.success
         - 1.40 * outcome.shape_error
-        - 0.42 * outcome.damage
-        - 0.18 * outcome.force_clip_rate
+        - 0.42 * safety_weight * outcome.damage
+        - 0.18 * safety_weight * outcome.force_clip_rate
+        - 0.10 * safety_weight * outcome.contact_rate
         - 0.11 * uncertainty
         - probe_penalty
     )
@@ -738,6 +781,51 @@ def surrogate_predict(cfg: DeformableConfig, action: str, memory_estimate: float
     )
 
 
+def planner_profile(method: str, ablation: str | None = None) -> Tuple[float, float, float]:
+    safety_weight = 1.0
+    probe_weight = 1.0
+    conservative_weight = 0.18
+    if method == "damage_aware_visible_mpc":
+        safety_weight, probe_weight, conservative_weight = 1.85, 1.80, 0.25
+    elif method == "safety_constrained_particle_filter":
+        safety_weight, probe_weight, conservative_weight = 2.15, 2.20, 0.30
+    elif method == "robust_cem_surrogate":
+        safety_weight, probe_weight, conservative_weight = 1.60, 1.70, 0.28
+    elif method == "action_conditioned_memory_v5" or (ablation is not None and ablation.startswith("action_conditioned_v5")):
+        safety_weight, probe_weight, conservative_weight = 2.35, 2.60, 0.34
+    if ablation == "action_conditioned_v5_no_safety_gate":
+        safety_weight, probe_weight, conservative_weight = 1.05, 1.00, 0.12
+    if ablation == "action_conditioned_v5_no_damage_penalty":
+        safety_weight, probe_weight = 1.00, 1.00
+    return safety_weight, probe_weight, conservative_weight
+
+
+def action_space_for(method: str, cfg: DeformableConfig, uncertainty: float, ablation: str | None = None) -> List[str]:
+    action_space = list(ACTIONS)
+    no_diagnostic_methods = {"visible_state_mpc", "damage_aware_visible_mpc", "graph_dynamics_baseline"}
+    if method in no_diagnostic_methods or ablation == "action_conditioned_no_diagnostic_probes":
+        action_space = [action for action in action_space if action != "diagnostic_branch_pull"]
+    if method in {"damage_aware_visible_mpc", "safety_constrained_particle_filter", "robust_cem_surrogate", "action_conditioned_memory_v5"} or (
+        ablation is not None and ablation.startswith("action_conditioned_v5")
+    ):
+        if cfg.object_type != "elastic_band":
+            action_space = [action for action in action_space if action != "two_end_stretch"]
+    if method == "action_conditioned_memory_v5" or (ablation is not None and ablation.startswith("action_conditioned_v5")):
+        diagnostic_is_safe = (
+            uncertainty > 0.17
+            and cfg.force_limit >= 18.0
+            and cfg.split.fixture_strength <= 0.48
+            and float(np.mean(cfg.observed_mask)) <= 0.84
+        )
+        if ablation != "action_conditioned_v5_no_diagnostic_gate" and not diagnostic_is_safe:
+            action_space = [action for action in action_space if action != "diagnostic_branch_pull"]
+    return action_space or [ACTIONS[0]]
+
+
+def predicted_risk(outcome: RolloutOutcome) -> float:
+    return float(outcome.damage + outcome.force_clip_rate + 0.50 * outcome.contact_rate + 0.08 * outcome.diagnostic_count)
+
+
 def choose_action(method: str, cfg: DeformableConfig, models: PlannerModels, ablation: str | None = None) -> Tuple[str, float, float, np.ndarray]:
     memories, uncertainty = predict_memory(cfg, models, method, ablation)
     if method == "oracle_latent_state":
@@ -752,27 +840,30 @@ def choose_action(method: str, cfg: DeformableConfig, models: PlannerModels, abl
                 best_action = action
                 best_failures = outcome.failures
         return best_action, cfg.true_memory, 0.0, best_failures
-    if ablation == "action_conditioned_no_diagnostic_probes":
-        action_space = [a for a in ACTIONS if a != "diagnostic_branch_pull"]
-    elif method in {"visible_state_mpc", "graph_dynamics_baseline"}:
-        action_space = [a for a in ACTIONS if a != "diagnostic_branch_pull"]
-    else:
-        action_space = ACTIONS
-    allow_probe = method == "action_conditioned_memory" or (ablation is not None and ablation != "action_conditioned_no_diagnostic_probes")
+    action_space = action_space_for(method, cfg, uncertainty, ablation)
+    allow_probe = "diagnostic_branch_pull" in action_space and method not in {"visible_state_mpc", "damage_aware_visible_mpc", "graph_dynamics_baseline"}
+    safety_weight, probe_weight, conservative_weight = planner_profile(method, ablation)
     best_action = action_space[0]
     best_score = -1e9
     best_pred: RolloutOutcome | None = None
     for action in action_space:
         pred_scores: List[float] = []
         pred_outcomes: List[RolloutOutcome] = []
+        risks: List[float] = []
         for memory in memories:
             est = estimated_config(cfg, memory)
             pred = surrogate_predict(est, action, memory, uncertainty)
             pred_outcomes.append(pred)
-            pred_scores.append(score_outcome(pred, uncertainty, allow_probe))
+            pred_scores.append(score_outcome(pred, uncertainty, allow_probe, safety_weight, probe_weight))
+            risks.append(predicted_risk(pred))
         score = float(np.mean(pred_scores))
-        if method in {"ensemble_uncertainty_planner", "particle_filter_memory"} or ablation != "action_conditioned_no_uncertainty_term":
-            score -= 0.18 * float(np.std(pred_scores))
+        if method in {"ensemble_uncertainty_planner", "particle_filter_memory", "safety_constrained_particle_filter", "robust_cem_surrogate", "action_conditioned_memory_v5"} or (
+            ablation is not None and ablation not in {"action_conditioned_no_uncertainty_term", "action_conditioned_v5_no_uncertainty_term"}
+        ):
+            score -= conservative_weight * float(np.std(pred_scores))
+        score -= 0.14 * safety_weight * float(max(risks))
+        if action == "diagnostic_branch_pull" and method == "action_conditioned_memory_v5" and uncertainty < 0.24:
+            score -= 0.10
         if score > best_score:
             best_score = score
             best_action = action
@@ -816,6 +907,96 @@ def evaluate_method(method: str, cfg: DeformableConfig, models: PlannerModels, a
     }
 
 
+def choose_action_with_risk_budget(
+    method: str,
+    cfg: DeformableConfig,
+    models: PlannerModels,
+    risk_budget: float,
+) -> Tuple[str, float, float, np.ndarray, float]:
+    memories, uncertainty = predict_memory(cfg, models, method)
+    if method == "oracle_latent_state":
+        best_action = ACTIONS[0]
+        best_score = -1e9
+        best_failures = np.zeros(len(FAILURES), dtype=int)
+        best_risk = 1e9
+        for action in ACTIONS:
+            outcome = simulate(cfg, action, cfg.true_memory)
+            risk = predicted_risk(outcome)
+            score = score_outcome(outcome, 0.0, allow_probe=True, safety_weight=2.0, probe_weight=2.0)
+            score -= 3.0 * max(0.0, risk - risk_budget)
+            if score > best_score:
+                best_score = score
+                best_action = action
+                best_failures = outcome.failures
+                best_risk = risk
+        return best_action, cfg.true_memory, 0.0, best_failures, float(best_risk)
+
+    action_space = action_space_for(method, cfg, uncertainty)
+    allow_probe = "diagnostic_branch_pull" in action_space and method not in {"visible_state_mpc", "damage_aware_visible_mpc", "graph_dynamics_baseline"}
+    safety_weight, probe_weight, conservative_weight = planner_profile(method)
+    best_action = action_space[0]
+    best_score = -1e9
+    best_pred: RolloutOutcome | None = None
+    best_risk = 1e9
+    for action in action_space:
+        pred_scores: List[float] = []
+        pred_outcomes: List[RolloutOutcome] = []
+        risks: List[float] = []
+        for memory in memories:
+            est = estimated_config(cfg, memory)
+            pred = surrogate_predict(est, action, memory, uncertainty)
+            pred_outcomes.append(pred)
+            pred_scores.append(score_outcome(pred, uncertainty, allow_probe, safety_weight, probe_weight))
+            risks.append(predicted_risk(pred))
+        risk = float(np.mean(risks) + 0.35 * np.std(risks))
+        score = float(np.mean(pred_scores)) - conservative_weight * float(np.std(pred_scores))
+        score -= 3.25 * max(0.0, risk - risk_budget)
+        score -= 0.10 * safety_weight * float(max(risks))
+        if score > best_score:
+            best_score = score
+            best_action = action
+            best_pred = pred_outcomes[int(np.argmax(pred_scores))]
+            best_risk = risk
+    assert best_pred is not None
+    return best_action, float(np.mean(memories)), uncertainty, best_pred.failures, float(best_risk)
+
+
+def evaluate_method_fixed_risk(method: str, cfg: DeformableConfig, models: PlannerModels, risk_budget: float) -> Dict[str, str]:
+    action, memory_est, uncertainty, pred_failures, pred_risk = choose_action_with_risk_budget(method, cfg, models, risk_budget)
+    actual = simulate(cfg, action, memory_est)
+    row = {
+        "seed": str(cfg.seed),
+        "scenario": str(cfg.scenario),
+        "scenario_id": f"{cfg.split.name}_{cfg.seed}_{cfg.scenario}_{cfg.object_type}",
+        "split": cfg.split.name,
+        "risk_budget": f"{risk_budget:.2f}",
+        "object_type": cfg.object_type,
+        "method": method,
+        "chosen_action": action,
+        "true_memory": f"{cfg.true_memory:.5f}",
+        "estimated_memory": f"{memory_est:.5f}",
+        "uncertainty": f"{uncertainty:.5f}",
+        "predicted_risk": f"{pred_risk:.5f}",
+        "visible_fraction": f"{float(np.mean(cfg.observed_mask)):.5f}",
+        "success": str(actual.success),
+        "shape_error": f"{actual.shape_error:.5f}",
+        "memory_error": f"{actual.memory_error:.5f}",
+        "damage": f"{actual.damage:.5f}",
+        "max_stretch": f"{actual.max_stretch:.5f}",
+        "contact_rate": f"{actual.contact_rate:.5f}",
+        "force_clip_rate": f"{actual.force_clip_rate:.5f}",
+        "strain_energy": f"{actual.strain_energy:.5f}",
+        "final_progress": f"{actual.final_progress:.5f}",
+        "diagnostic_count": str(actual.diagnostic_count),
+        "actual_failures": ";".join(name for name, active in zip(FAILURES, actual.failures) if active),
+        "predicted_failures": ";".join(name for name, active in zip(FAILURES, pred_failures) if active),
+        "actual_failure_bits": "".join(str(int(x)) for x in actual.failures),
+        "predicted_failure_bits": "".join(str(int(x)) for x in pred_failures),
+        "trajectory": actual.trajectory,
+    }
+    return row
+
+
 def mechanism_macro_f1(rows: Sequence[Dict[str, str]]) -> float:
     if not rows:
         return 0.0
@@ -837,49 +1018,74 @@ def mechanism_macro_f1(rows: Sequence[Dict[str, str]]) -> float:
     return float(np.mean(f1s))
 
 
-def build_seed_metrics(rows: Sequence[Dict[str, str]]) -> List[Dict[str, str]]:
-    grouped: Dict[Tuple[str, str, str], List[Dict[str, str]]] = {}
+def build_seed_metrics(rows: Sequence[Dict[str, str]], extra_fields: Sequence[str] = ()) -> List[Dict[str, str]]:
+    grouped: Dict[Tuple[str, ...], List[Dict[str, str]]] = {}
     for row in rows:
-        grouped.setdefault((row["method"], row["split"], row["seed"]), []).append(row)
+        grouped.setdefault(tuple([row["method"], row["split"], *[row[field] for field in extra_fields], row["seed"]]), []).append(row)
     metrics: List[Dict[str, str]] = []
-    for (method, split, seed), group in sorted(grouped.items()):
+    for key, group in sorted(grouped.items()):
+        method = key[0]
+        split = key[1]
+        seed = key[-1]
+        extra_values = key[2:-1]
         vals = lambda key: [float(row[key]) for row in group]
-        metrics.append(
+        item = {
+            "method": method,
+            "split": split,
+        }
+        for field, value in zip(extra_fields, extra_values):
+            item[field] = value
+        mean_uncertainty = float(np.mean(vals("uncertainty")))
+        mean_memory_error = float(np.mean(vals("memory_error")))
+        item.update(
             {
-                "method": method,
-                "split": split,
                 "seed": seed,
                 "episodes": str(len(group)),
                 "success": f"{float(np.mean(vals('success'))):.5f}",
                 "shape_error": f"{float(np.mean(vals('shape_error'))):.5f}",
-                "memory_error": f"{float(np.mean(vals('memory_error'))):.5f}",
+                "memory_error": f"{mean_memory_error:.5f}",
+                "memory_calibration_error": f"{abs(mean_uncertainty - mean_memory_error):.5f}",
                 "mechanism_macro_f1": f"{mechanism_macro_f1(group):.5f}",
                 "tail_risk": f"{1.0 - float(np.mean(vals('success'))):.5f}",
                 "damage_rate": f"{float(np.mean(vals('damage'))):.5f}",
                 "force_clip_rate": f"{float(np.mean(vals('force_clip_rate'))):.5f}",
+                "contact_rate": f"{float(np.mean(vals('contact_rate'))):.5f}",
                 "diagnostic_rate": f"{float(np.mean(vals('diagnostic_count'))):.5f}",
+                "max_stretch": f"{float(np.mean(vals('max_stretch'))):.5f}",
+                "strain_energy": f"{float(np.mean(vals('strain_energy'))):.5f}",
             }
         )
+        metrics.append(item)
     return metrics
 
 
-def build_summary(seed_rows: Sequence[Dict[str, str]]) -> List[Dict[str, str]]:
-    grouped: Dict[Tuple[str, str], List[Dict[str, str]]] = {}
+def build_summary(seed_rows: Sequence[Dict[str, str]], extra_fields: Sequence[str] = ()) -> List[Dict[str, str]]:
+    grouped: Dict[Tuple[str, ...], List[Dict[str, str]]] = {}
     for row in seed_rows:
-        grouped.setdefault((row["method"], row["split"]), []).append(row)
+        grouped.setdefault(tuple([row["method"], row["split"], *[row[field] for field in extra_fields]]), []).append(row)
     summary: List[Dict[str, str]] = []
     metrics = [
         "success",
         "shape_error",
         "memory_error",
+        "memory_calibration_error",
         "mechanism_macro_f1",
         "tail_risk",
         "damage_rate",
         "force_clip_rate",
+        "contact_rate",
         "diagnostic_rate",
+        "max_stretch",
+        "strain_energy",
     ]
-    for (method, split), group in sorted(grouped.items()):
-        item = {"method": method, "split": split, "seeds": str(len(group))}
+    for key, group in sorted(grouped.items()):
+        method = key[0]
+        split = key[1]
+        extra_values = key[2:]
+        item = {"method": method, "split": split}
+        for field, value in zip(extra_fields, extra_values):
+            item[field] = value
+        item["seeds"] = str(len(group))
         for metric in metrics:
             vals = [float(row[metric]) for row in group]
             item[f"mean_{metric}"] = f"{float(np.mean(vals)):.5f}"
@@ -888,13 +1094,21 @@ def build_summary(seed_rows: Sequence[Dict[str, str]]) -> List[Dict[str, str]]:
     return summary
 
 
-def build_pairwise(seed_rows: Sequence[Dict[str, str]], reference: str = "action_conditioned_memory") -> List[Dict[str, str]]:
-    by_key = {(row["method"], row["split"], row["seed"]): row for row in seed_rows}
+def build_pairwise(
+    seed_rows: Sequence[Dict[str, str]],
+    reference: str = "action_conditioned_memory",
+    extra_fields: Sequence[str] = (),
+) -> List[Dict[str, str]]:
+    by_key = {
+        tuple([row["method"], row["split"], *[row[field] for field in extra_fields], row["seed"]]): row for row in seed_rows
+    }
     methods = sorted({row["method"] for row in seed_rows})
-    splits = sorted({row["split"] for row in seed_rows})
-    seeds = sorted({row["seed"] for row in seed_rows})
+    contexts = sorted({tuple([row["split"], *[row[field] for field in extra_fields]]) for row in seed_rows})
     out: List[Dict[str, str]] = []
-    for split in splits:
+    for context in contexts:
+        split = context[0]
+        extra_values = context[1:]
+        seeds = sorted({row["seed"] for row in seed_rows if tuple([row["split"], *[row[field] for field in extra_fields]]) == context})
         for method in methods:
             if method == reference:
                 continue
@@ -902,30 +1116,72 @@ def build_pairwise(seed_rows: Sequence[Dict[str, str]], reference: str = "action
             memory_diffs: List[float] = []
             f1_diffs: List[float] = []
             damage_reductions: List[float] = []
+            calibration_reductions: List[float] = []
             for seed in seeds:
-                ref = by_key.get((reference, split, seed))
-                other = by_key.get((method, split, seed))
+                ref = by_key.get(tuple([reference, split, *extra_values, seed]))
+                other = by_key.get(tuple([method, split, *extra_values, seed]))
                 if ref is None or other is None:
                     continue
                 success_diffs.append(float(ref["success"]) - float(other["success"]))
                 memory_diffs.append(float(other["memory_error"]) - float(ref["memory_error"]))
                 f1_diffs.append(float(ref["mechanism_macro_f1"]) - float(other["mechanism_macro_f1"]))
                 damage_reductions.append(float(other["damage_rate"]) - float(ref["damage_rate"]))
+                calibration_reductions.append(float(other["memory_calibration_error"]) - float(ref["memory_calibration_error"]))
             if success_diffs:
-                out.append(
+                item = {
+                    "split": split,
+                }
+                for field, value in zip(extra_fields, extra_values):
+                    item[field] = value
+                item.update(
                     {
-                        "split": split,
                         "reference": reference,
                         "comparison": method,
                         "paired_success_diff": f"{float(np.mean(success_diffs)):.5f}",
                         "ci95_success_diff": f"{ci95(success_diffs):.5f}",
                         "paired_memory_error_reduction": f"{float(np.mean(memory_diffs)):.5f}",
+                        "paired_calibration_error_reduction": f"{float(np.mean(calibration_reductions)):.5f}",
                         "paired_mechanism_f1_diff": f"{float(np.mean(f1_diffs)):.5f}",
                         "paired_damage_reduction": f"{float(np.mean(damage_reductions)):.5f}",
                         "reference_better_seeds": str(sum(1 for diff in success_diffs if diff > 0.0)),
                         "seeds": str(len(success_diffs)),
                     }
                 )
+                out.append(item)
+    return out
+
+
+def build_aggregate_seed_metrics(seed_rows: Sequence[Dict[str, str]], split_names: Sequence[str], aggregate_name: str) -> List[Dict[str, str]]:
+    grouped: Dict[Tuple[str, str], List[Dict[str, str]]] = {}
+    for row in seed_rows:
+        if row["split"] in split_names:
+            grouped.setdefault((row["method"], row["seed"]), []).append(row)
+    metrics = [
+        "success",
+        "shape_error",
+        "memory_error",
+        "memory_calibration_error",
+        "mechanism_macro_f1",
+        "tail_risk",
+        "damage_rate",
+        "force_clip_rate",
+        "contact_rate",
+        "diagnostic_rate",
+        "max_stretch",
+        "strain_energy",
+    ]
+    out: List[Dict[str, str]] = []
+    for (method, seed), group in sorted(grouped.items()):
+        item = {
+            "method": method,
+            "split": aggregate_name,
+            "seed": seed,
+            "episodes": str(sum(int(row["episodes"]) for row in group)),
+        }
+        for metric in metrics:
+            vals = [float(row[metric]) for row in group]
+            item[metric] = f"{float(np.mean(vals)):.5f}"
+        out.append(item)
     return out
 
 
@@ -980,10 +1236,37 @@ def plot_stress(stress_summary: Sequence[Dict[str, str]], path: Path) -> None:
     plt.close()
 
 
-def decide(summary: Sequence[Dict[str, str]], pairwise: Sequence[Dict[str, str]]) -> Tuple[str, str]:
+def plot_fixed_risk(fixed_summary: Sequence[Dict[str, str]], split: str, path: Path) -> None:
+    plt.figure(figsize=(8.2, 4.8))
+    rows_for_split = [row for row in fixed_summary if row["split"] == split]
+    for method in sorted({row["method"] for row in rows_for_split}):
+        rows = sorted([row for row in rows_for_split if row["method"] == method], key=lambda row: float(row["risk_budget"]))
+        xs = [float(row["risk_budget"]) for row in rows]
+        ys = [float(row["mean_success"]) for row in rows]
+        es = [float(row["ci95_success"]) for row in rows]
+        plt.errorbar(xs, ys, yerr=es, marker="o", linewidth=1.8, capsize=3, label=method)
+    plt.xlabel("predicted risk budget")
+    plt.ylabel("closed-loop success")
+    plt.title(f"Paper 75 fixed-risk success on {split}")
+    plt.ylim(-0.02, 1.02)
+    plt.legend(fontsize=6)
+    plt.tight_layout()
+    plt.savefig(path, dpi=180)
+    plt.close()
+
+
+def decide(
+    summary: Sequence[Dict[str, str]],
+    pairwise: Sequence[Dict[str, str]],
+    aggregate_summary: Sequence[Dict[str, str]],
+    aggregate_pairwise: Sequence[Dict[str, str]],
+    fixed_summary: Sequence[Dict[str, str]],
+    ablation_summary: Sequence[Dict[str, str]],
+    stress_summary: Sequence[Dict[str, str]],
+) -> Tuple[str, str]:
     combined = [row for row in summary if row["split"] == "combined_memory_stress"]
-    proposed = [row for row in combined if row["method"] == "action_conditioned_memory"][0]
-    non_oracle = [row for row in combined if row["method"] not in {"action_conditioned_memory", "oracle_latent_state"}]
+    proposed = [row for row in combined if row["method"] == "action_conditioned_memory_v5"][0]
+    non_oracle = [row for row in combined if row["method"] not in {"action_conditioned_memory_v5", "oracle_latent_state"}]
     best = max(non_oracle, key=lambda row: float(row["mean_success"]))
     pair = [row for row in pairwise if row["split"] == "combined_memory_stress" and row["comparison"] == best["method"]][0]
     prop_success = float(proposed["mean_success"])
@@ -993,12 +1276,45 @@ def decide(summary: Sequence[Dict[str, str]], pairwise: Sequence[Dict[str, str]]
     memory_reduction = float(pair["paired_memory_error_reduction"])
     f1_diff = float(pair["paired_mechanism_f1_diff"])
     damage_reduction = float(pair["paired_damage_reduction"])
+    aggregate_best = max(
+        [row for row in aggregate_summary if row["split"] == "hard_regime" and row["method"] not in {"action_conditioned_memory_v5", "oracle_latent_state"}],
+        key=lambda row: float(row["mean_success"]),
+    )
+    aggregate_pair = [
+        row for row in aggregate_pairwise if row["split"] == "hard_regime" and row["comparison"] == aggregate_best["method"]
+    ][0]
+    fixed_gate = True
+    fixed_notes: List[str] = []
+    for budget in ["0.10", "0.20"]:
+        rows = [row for row in fixed_summary if row["split"] == "combined_memory_stress" and row["risk_budget"] == budget]
+        v5_row = [row for row in rows if row["method"] == "action_conditioned_memory_v5"][0]
+        best_fixed = max([row for row in rows if row["method"] != "oracle_latent_state"], key=lambda row: float(row["mean_success"]))
+        ok = float(v5_row["mean_success"]) >= float(best_fixed["mean_success"]) - 0.005
+        fixed_gate = fixed_gate and ok
+        fixed_notes.append(f"budget {budget}: v5={float(v5_row['mean_success']):.3f}, best={best_fixed['method']}:{float(best_fixed['mean_success']):.3f}")
+    full_ablation = [row for row in ablation_summary if row["method"] == "action_conditioned_v5_full"][0]
+    full_success = float(full_ablation["mean_success"])
+    beating_ablations = [
+        row for row in ablation_summary if row["method"] != "action_conditioned_v5_full" and float(row["mean_success"]) >= full_success - 0.005
+    ]
+    max_stress = max(float(row["stress_level"]) for row in stress_summary)
+    stress_rows = [row for row in stress_summary if abs(float(row["stress_level"]) - max_stress) < 1e-9]
+    stress_v5 = [row for row in stress_rows if row["method"] == "action_conditioned_memory_v5"][0]
+    stress_best = max([row for row in stress_rows if row["method"] not in {"action_conditioned_memory_v5", "oracle_latent_state"}], key=lambda row: float(row["mean_success"]))
+    safety_ok = damage_reduction >= -0.020 and float(proposed["mean_force_clip_rate"]) <= float(best["mean_force_clip_rate"]) + 0.020
+    stress_ok = float(stress_v5["mean_success"]) >= float(stress_best["mean_success"]) - 0.010
+    aggregate_paired = float(aggregate_pair["paired_success_diff"])
+    aggregate_ci = float(aggregate_pair["ci95_success_diff"])
     if (
         prop_success - best_success >= 0.045
         and paired - paired_ci > 0.0
+        and aggregate_paired - aggregate_ci > 0.0
+        and fixed_gate
+        and safety_ok
         and memory_reduction >= -0.005
         and f1_diff >= -0.015
-        and damage_reduction >= -0.020
+        and not beating_ablations
+        and stress_ok
     ):
         return (
             "STRONG_REVISE",
@@ -1008,9 +1324,13 @@ def decide(summary: Sequence[Dict[str, str]], pairwise: Sequence[Dict[str, str]]
         )
     return (
         "KILL_ARCHIVE",
-        f"action_conditioned_memory does not clear strongest non-oracle baseline {best['method']} decisively on combined_memory_stress "
+        f"action_conditioned_memory_v5 does not clear every frozen gate. Main combined_memory_stress comparison against {best['method']}: "
         f"(proposed={prop_success:.3f}, best_baseline={best_success:.3f}, paired diff={paired:.3f}+/-{paired_ci:.3f}, "
-        f"memory_reduction={memory_reduction:.3f}, mechanism_f1_diff={f1_diff:.3f}, damage_reduction={damage_reduction:.3f}).",
+        f"memory_reduction={memory_reduction:.3f}, mechanism_f1_diff={f1_diff:.3f}, damage_reduction={damage_reduction:.3f}). "
+        f"Aggregate hard-regime paired diff against {aggregate_best['method']} is {aggregate_paired:.3f}+/-{aggregate_ci:.3f}. "
+        f"Fixed-risk gate: {'; '.join(fixed_notes)}. "
+        f"Ablations matching full v5: {', '.join(row['method'] for row in beating_ablations) or 'none'}. "
+        f"Max-stress v5={float(stress_v5['mean_success']):.3f}, best_non_oracle={stress_best['method']}:{float(stress_best['mean_success']):.3f}.",
     )
 
 
@@ -1018,20 +1338,29 @@ def negative_cases(rows: Sequence[Dict[str, str]]) -> List[Dict[str, str]]:
     selected = [
         row
         for row in rows
-        if row["split"] == "combined_memory_stress" and row["method"] == "action_conditioned_memory" and row["success"] == "0"
+        if row["split"] == "combined_memory_stress" and row["method"] == "action_conditioned_memory_v5" and row["success"] == "0"
     ]
+    by_scenario = group_rows(rows, ["scenario_id"])
     out: List[Dict[str, str]] = []
     for row in selected[:12]:
+        alternatives = [
+            other
+            for other in by_scenario.get((row["scenario_id"],), [])
+            if other["method"] not in {"action_conditioned_memory_v5", "oracle_latent_state"} and other["success"] == "1"
+        ]
+        strongest_success = sorted(alternatives, key=lambda item: (float(item["damage"]), float(item["shape_error"])))[0] if alternatives else None
         out.append(
             {
                 "seed": row["seed"],
                 "scenario_id": row["scenario_id"],
                 "object_type": row["object_type"],
                 "chosen_action": row["chosen_action"],
+                "successful_baseline": strongest_success["method"] if strongest_success else "",
+                "successful_baseline_action": strongest_success["chosen_action"] if strongest_success else "",
                 "actual_failures": row["actual_failures"],
                 "shape_error": row["shape_error"],
                 "memory_error": row["memory_error"],
-                "lesson": "action-conditioned memory estimated a branch but the selected action still failed deformable contact dynamics",
+                "lesson": "v5 memory planning still failed to convert latent estimates into safe deformable contact control",
             }
         )
     return out or [
@@ -1040,6 +1369,8 @@ def negative_cases(rows: Sequence[Dict[str, str]]) -> List[Dict[str, str]]:
             "scenario_id": "",
             "object_type": "",
             "chosen_action": "",
+            "successful_baseline": "",
+            "successful_baseline_action": "",
             "actual_failures": "",
             "shape_error": "",
             "memory_error": "",
@@ -1078,7 +1409,10 @@ def main() -> None:
                     rollout_rows.append(evaluate_method(method, cfg, models_by_seed[seed]))
     seed_rows = build_seed_metrics(rollout_rows)
     summary = build_summary(seed_rows)
-    pairwise = build_pairwise(seed_rows)
+    pairwise = build_pairwise(seed_rows, reference="action_conditioned_memory_v5")
+    aggregate_seed = build_aggregate_seed_metrics(seed_rows, HARD_SPLITS, "hard_regime")
+    aggregate_summary = build_summary(aggregate_seed)
+    aggregate_pairwise = build_pairwise(aggregate_seed, reference="action_conditioned_memory_v5")
 
     ablation_rows_raw: List[Dict[str, str]] = []
     combined = SPLIT_BY_NAME["combined_memory_stress"]
@@ -1086,12 +1420,12 @@ def main() -> None:
         for local_idx in range(ABLATION_SCENARIOS):
             cfg = build_config(combined, seed, 7000 + local_idx, "ablation")
             for ablation in ABLATION_METHODS:
-                ablation_rows_raw.append(evaluate_method("action_conditioned_memory", cfg, models_by_seed[seed], ablation=ablation))
+                ablation_rows_raw.append(evaluate_method("action_conditioned_memory_v5", cfg, models_by_seed[seed], ablation=ablation))
     ablation_seed = build_seed_metrics(ablation_rows_raw)
     ablation_summary = build_summary(ablation_seed)
 
     stress_raw: List[Dict[str, str]] = []
-    for level in ([0.0, 1.0] if QUICK_MODE else np.linspace(0.0, 1.0, 6)):
+    for level in ([0.0, 1.0] if QUICK_MODE else np.linspace(0.0, 1.0, 7)):
         for seed in SEEDS:
             for local_idx in range(STRESS_SCENARIOS):
                 cfg = build_config(combined, seed, 9000 + int(100 * level) + local_idx, "stress", stress_level=float(level))
@@ -1099,26 +1433,58 @@ def main() -> None:
                     row = evaluate_method(method, cfg, models_by_seed[seed])
                     row["stress_level"] = f"{float(level):.2f}"
                     stress_raw.append(row)
-    stress_seed = build_seed_metrics(stress_raw)
     stress_summary: List[Dict[str, str]] = []
     for (method, stress_level), group in sorted(group_rows(stress_raw, ["method", "stress_level"]).items()):
         seed_group = build_seed_metrics(group)
         item = {"method": method, "stress_level": stress_level, "seeds": str(len({row["seed"] for row in group}))}
-        for metric in ["success", "shape_error", "memory_error", "mechanism_macro_f1", "tail_risk", "damage_rate"]:
+        for metric in [
+            "success",
+            "shape_error",
+            "memory_error",
+            "memory_calibration_error",
+            "mechanism_macro_f1",
+            "tail_risk",
+            "damage_rate",
+            "force_clip_rate",
+            "contact_rate",
+            "diagnostic_rate",
+        ]:
             vals = [float(row[metric]) for row in seed_group]
             item[f"mean_{metric}"] = f"{float(np.mean(vals)):.5f}"
             item[f"ci95_{metric}"] = f"{ci95(vals):.5f}"
         stress_summary.append(item)
 
+    fixed_raw: List[Dict[str, str]] = []
+    fixed_splits = [SPLIT_BY_NAME[name] for name in ["hidden_strain_memory", "occluded_contact_memory", "combined_memory_stress"]]
+    for budget in RISK_BUDGETS:
+        for seed in SEEDS:
+            for split in fixed_splits:
+                for local_idx in range(FIXED_RISK_SCENARIOS):
+                    cfg = build_config(split, seed, 11000 + 1000 * split.task_id + local_idx, "fixed_risk")
+                    for method in FIXED_RISK_METHODS:
+                        fixed_raw.append(evaluate_method_fixed_risk(method, cfg, models_by_seed[seed], budget))
+    fixed_seed = build_seed_metrics(fixed_raw, extra_fields=("risk_budget",))
+    fixed_summary = build_summary(fixed_seed, extra_fields=("risk_budget",))
+    fixed_pairwise = build_pairwise(fixed_seed, reference="action_conditioned_memory_v5", extra_fields=("risk_budget",))
+
     write_csv(RESULTS / "rollouts.csv", rollout_rows)
     write_csv(RESULTS / "raw_seed_metrics.csv", seed_rows)
     write_csv(RESULTS / "metrics.csv", summary)
     write_csv(RESULTS / "pairwise_stats.csv", pairwise)
+    write_csv(RESULTS / "aggregate_seed_metrics.csv", aggregate_seed)
+    write_csv(RESULTS / "aggregate_metrics.csv", aggregate_summary)
+    write_csv(RESULTS / "aggregate_pairwise_stats.csv", aggregate_pairwise)
     write_csv(RESULTS / "ablation_rollouts.csv", ablation_rows_raw)
+    write_csv(RESULTS / "ablation_seed_metrics.csv", ablation_seed)
     write_csv(RESULTS / "ablation_metrics.csv", ablation_summary)
     write_csv(RESULTS / "stress_sweep_raw.csv", stress_raw)
     write_csv(RESULTS / "stress_sweep.csv", stress_summary)
+    write_csv(RESULTS / "fixed_risk_raw.csv", fixed_raw)
+    write_csv(RESULTS / "fixed_risk_seed_metrics.csv", fixed_seed)
+    write_csv(RESULTS / "fixed_risk_metrics.csv", fixed_summary)
+    write_csv(RESULTS / "fixed_risk_pairwise.csv", fixed_pairwise)
     write_csv(FIGURES / "stress_curve_data.csv", stress_summary)
+    write_csv(FIGURES / "fixed_risk_curve_data.csv", fixed_summary)
     write_csv(RESULTS / "negative_cases.csv", negative_cases(rollout_rows))
     write_csv(
         RESULTS / "training_summary.csv",
@@ -1131,9 +1497,12 @@ def main() -> None:
                 "eval_scenarios_per_split": str(EVAL_SCENARIOS),
                 "ablation_scenarios": str(ABLATION_SCENARIOS),
                 "stress_scenarios": str(STRESS_SCENARIOS),
+                "fixed_risk_scenarios": str(FIXED_RISK_SCENARIOS),
                 "splits": str(len(SPLITS)),
                 "methods": str(len(METHODS)),
                 "ablation_methods": str(len(ABLATION_METHODS)),
+                "stress_methods": str(len(STRESS_METHODS)),
+                "fixed_risk_methods": str(len(FIXED_RISK_METHODS)),
                 "actions": str(len(ACTIONS)),
                 "sim_steps": str(STEPS),
                 "dt": f"{DT:.5f}",
@@ -1143,30 +1512,43 @@ def main() -> None:
 
     plot_bar(summary, "combined_memory_stress", "success", FIGURES / "deformable_memory_final_success.png", "Paper 75 combined-memory closed-loop success")
     plot_bar(summary, "combined_memory_stress", "memory_error", FIGURES / "deformable_memory_error.png", "Paper 75 hidden-memory estimation error")
+    plot_bar(summary, "combined_memory_stress", "damage_rate", FIGURES / "deformable_memory_damage_rate.png", "Paper 75 combined-memory damage rate")
     plot_bar(ablation_summary, "combined_memory_stress", "success", FIGURES / "deformable_memory_ablation_success.png", "Paper 75 action-conditioned memory ablations")
     plot_stress(stress_summary, FIGURES / "deformable_memory_stress_sweep.png")
+    plot_fixed_risk(fixed_summary, "combined_memory_stress", FIGURES / "deformable_memory_fixed_risk.png")
 
-    decision, reason = decide(summary, pairwise)
+    decision, reason = decide(summary, pairwise, aggregate_summary, aggregate_pairwise, fixed_summary, ablation_summary, stress_summary)
     elapsed = time.time() - start
     combined_rows = [row for row in summary if row["split"] == "combined_memory_stress"]
+    aggregate_rows = [row for row in aggregate_summary if row["split"] == "hard_regime"]
     with (RESULTS / "summary.txt").open("w", encoding="utf-8") as f:
-        f.write("Paper 75 deformable_memory_under_action real deformable-physics rebuild\n")
+        f.write("Paper 75 deformable_memory_under_action expanded v5 deformable-physics rebuild\n")
         f.write(f"Terminal recommendation: {decision}\n")
         f.write(f"Reason: {reason}\n")
         f.write(f"Rollout rows: {len(rollout_rows)}\n")
         f.write(f"Seed metric rows: {len(seed_rows)}\n")
+        f.write(f"Aggregate seed rows: {len(aggregate_seed)}\n")
         f.write(f"Ablation rows: {len(ablation_rows_raw)}\n")
         f.write(f"Stress rows: {len(stress_raw)}\n")
+        f.write(f"Fixed-risk rows: {len(fixed_raw)}\n")
         f.write(f"Seeds: {SEEDS}\n")
         f.write(f"Training scenarios per split: {TRAIN_SCENARIOS}\n")
         f.write(f"Evaluation scenarios per split: {EVAL_SCENARIOS}\n")
+        f.write(f"Fixed-risk budgets: {RISK_BUDGETS}\n")
         f.write(f"Runtime seconds: {elapsed:.2f}\n\n")
         f.write("Combined-memory-stress summary:\n")
         for row in sorted(combined_rows, key=lambda item: -float(item["mean_success"])):
             f.write(
                 f"{row['method']} success={row['mean_success']} ci95={row['ci95_success']} "
                 f"shape_error={row['mean_shape_error']} memory_error={row['mean_memory_error']} "
-                f"mechanism_f1={row['mean_mechanism_macro_f1']} damage={row['mean_damage_rate']}\n"
+                f"calibration_error={row['mean_memory_calibration_error']} mechanism_f1={row['mean_mechanism_macro_f1']} "
+                f"damage={row['mean_damage_rate']} force_clip={row['mean_force_clip_rate']} diagnostic={row['mean_diagnostic_rate']}\n"
+            )
+        f.write("\nAggregate hard-regime summary:\n")
+        for row in sorted(aggregate_rows, key=lambda item: -float(item["mean_success"])):
+            f.write(
+                f"{row['method']} success={row['mean_success']} ci95={row['ci95_success']} "
+                f"memory_error={row['mean_memory_error']} damage={row['mean_damage_rate']} diagnostic={row['mean_diagnostic_rate']}\n"
             )
     print(f"wrote Paper 75 deformable-memory evidence to {RESULTS}")
     print(f"terminal recommendation: {decision}")

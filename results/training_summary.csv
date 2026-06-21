@@ -1,2 +1,2 @@
-quick_mode,seeds,seed_count,train_scenarios_per_split,eval_scenarios_per_split,ablation_scenarios,stress_scenarios,splits,methods,ablation_methods,actions,sim_steps,dt
-False,0;1;2;3;4;5;6,7,38,12,8,8,5,7,7,7,58,0.03500
+quick_mode,seeds,seed_count,train_scenarios_per_split,eval_scenarios_per_split,ablation_scenarios,stress_scenarios,fixed_risk_scenarios,splits,methods,ablation_methods,stress_methods,fixed_risk_methods,actions,sim_steps,dt
+False,0;1;2;3;4;5;6;7,8,48,14,10,9,8,5,11,8,8,9,7,60,0.03500

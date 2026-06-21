@@ -1,0 +1,11 @@
+split,reference,comparison,paired_success_diff,ci95_success_diff,paired_memory_error_reduction,paired_calibration_error_reduction,paired_mechanism_f1_diff,paired_damage_reduction,reference_better_seeds,seeds
+hard_regime,action_conditioned_memory_v5,action_conditioned_memory,0.02902,0.04180,-0.00994,0.02078,0.00130,0.21875,5,8
+hard_regime,action_conditioned_memory_v5,damage_aware_visible_mpc,-0.10268,0.01586,0.23981,0.05349,-0.01432,-0.02232,0,8
+hard_regime,action_conditioned_memory_v5,ensemble_uncertainty_planner,0.03348,0.04309,-0.01604,0.04713,0.00130,0.22322,6,8
+hard_regime,action_conditioned_memory_v5,graph_dynamics_baseline,-0.02679,0.02092,0.18692,0.05720,0.00391,-0.00670,0,8
+hard_regime,action_conditioned_memory_v5,history_rnn_estimator,0.02009,0.03589,-0.01825,0.04857,0.00130,0.20982,5,8
+hard_regime,action_conditioned_memory_v5,oracle_latent_state,-0.43080,0.03589,-0.19663,-0.05095,-0.49870,-0.22321,0,8
+hard_regime,action_conditioned_memory_v5,particle_filter_memory,0.04911,0.04117,-0.01825,0.09811,-0.03776,0.25446,5,8
+hard_regime,action_conditioned_memory_v5,robust_cem_surrogate,0.01562,0.02762,0.01370,0.00823,0.02083,0.09821,4,8
+hard_regime,action_conditioned_memory_v5,safety_constrained_particle_filter,-0.00446,0.01841,0.01355,-0.00257,0.01953,0.02455,4,8
+hard_regime,action_conditioned_memory_v5,visible_state_mpc,-0.10268,0.01586,0.23981,0.05349,-0.01432,-0.02232,0,8

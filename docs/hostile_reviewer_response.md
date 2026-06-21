@@ -37,3 +37,15 @@ The hostile-reviewer position became stronger after re-audit, not weaker.
 - The stress-sweep objection is also valid: the proposed method is below `ensemble_uncertainty_planner` at every stress level, including 0.321 versus 0.375 success at stress 1.00.
 
 No submission-ready framing can honestly rescue this paper without new evidence.
+
+## Expanded Response 2026-06-21
+
+The v5 rebuild fixes the most glaring v4 failure mode but still does not survive hostile review.
+
+- The diagnostic-probe damage problem is substantially reduced, but `action_conditioned_memory_v5` still has higher damage than `damage_aware_visible_mpc`: 0.250 versus 0.205 on `combined_memory_stress`.
+- The central success comparison remains negative: 0.562 +/- 0.062 for v5 versus 0.589 +/- 0.058 for `damage_aware_visible_mpc`.
+- The aggregate hard-regime comparison is decisively negative: paired success difference -0.103 +/- 0.016.
+- At maximum stress, v5 reaches 0.583 success while `damage_aware_visible_mpc` reaches 0.653.
+- Several ablations match the full v5 method, so the mechanism cannot be defended as necessary.
+
+Hostile-review answer: we improved the artifact, not the verdict. The paper should remain an honest negative archive.

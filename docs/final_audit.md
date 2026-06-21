@@ -2,51 +2,49 @@
 
 Paper: 75 deformable_memory_under_action
 
-Version: v4
+Version: v5-expanded
 
 Terminal decision: KILL_ARCHIVE
 
 ## Evidence Completed
 
 - Local mass-spring deformable manipulation benchmark.
-- Seven seeds: 0 through 6.
+- Eight seeds: 0 through 7.
 - Five splits and four deformable object families.
-- 2,940 main rollout rows.
-- 245 seed-level metric rows.
-- 392 ablation rollout rows.
-- 1,344 stress-sweep raw rows.
+- 6,160 main rollout rows.
+- 440 seed-level metric rows.
+- 88 aggregate seed rows.
+- 640 ablation rollout rows.
+- 4,032 stress-sweep raw rows.
+- 6,912 fixed-risk rollout rows.
 - 12 negative cases.
+- 30-page ICLR-style archive manuscript with boxed citation links.
 
 ## Gate Result
 
-The proposed method fails the decisive gate.
+The expanded v5 method fails the frozen decisive gates.
 
-- `action_conditioned_memory`: 0.440 +/- 0.069 combined-memory-stress success.
-- `visible_state_mpc`: 0.607 +/- 0.047 combined-memory-stress success.
-- Paired success difference: -0.167 +/- 0.094.
-- Hidden-memory error reduction versus visible-state MPC: +0.369.
-- Mechanism-F1 difference versus visible-state MPC: +0.125.
-- Damage reduction versus visible-state MPC: -0.298, meaning more damage.
+- `action_conditioned_memory_v5`: 0.562 +/- 0.062 combined-memory-stress success.
+- `damage_aware_visible_mpc`: 0.589 +/- 0.058 combined-memory-stress success.
+- Main paired success difference: -0.027 +/- 0.052.
+- Hidden-memory error reduction versus damage-aware visible MPC: +0.349.
+- Mechanism-F1 difference versus damage-aware visible MPC: +0.031.
+- Damage reduction versus damage-aware visible MPC: -0.045, meaning more damage.
+- Aggregate hard-regime paired success difference: -0.103 +/- 0.016.
+- Max-stress success: v5 reaches 0.583, while `damage_aware_visible_mpc` reaches 0.653.
 
-## Audit Conclusion
-
-The repo is now a real negative-result artifact. It should not be submitted to ICLR main.
-
-## Continuation Audit 2026-06-15
+## Continuation Audit 2026-06-21
 
 Rechecked gates:
 
-- `python -m py_compile src/run_experiment.py` passed.
-- CSV integrity passed with expected blank `actual_failures` and `predicted_failures` allowed for no-failure/no-prediction rows.
-- Evidence scale matched: 2,940 main rollout rows, 245 raw seed metric rows, 35 aggregate metric rows, 30 pairwise rows, 392 ablation rollout rows, 1,344 stress-sweep raw rows, and 12 negative cases.
-- Required baselines were present: `visible_state_mpc`, `history_rnn_estimator`, `particle_filter_memory`, `graph_dynamics_baseline`, `ensemble_uncertainty_planner`, and `oracle_latent_state`.
-- LaTeX/BibTeX rebuilt a 4-page PDF; `C:/Users/wangz/Downloads/75.pdf` SHA256 is `B405E5051AAD13FE4FA2A821AD77B83F8F40D6A48C888FC634B4B9464D5D27D9`.
+- `python -m py_compile src/run_experiment.py scripts/generate_manuscript.py scripts/validate_submission_artifacts.py` passed.
+- Full-run CSV integrity passed.
+- Expected evidence scale matched: 6,160 main rollouts, 440 raw seed metrics, 55 metrics, 50 pairwise rows, 88 aggregate seed rows, 11 aggregate metrics, 10 aggregate pairwise rows, 640 ablation rollouts, 64 ablation seed metrics, 8 ablation metrics, 4,032 stress raw rows, 56 stress rows, 6,912 fixed-risk rows, 864 fixed-risk seed metrics, 108 fixed-risk metrics, 96 fixed-risk pairwise rows, and 12 negative cases.
+- Required baselines were present: `visible_state_mpc`, `damage_aware_visible_mpc`, `history_rnn_estimator`, `particle_filter_memory`, `safety_constrained_particle_filter`, `graph_dynamics_baseline`, `ensemble_uncertainty_planner`, `robust_cem_surrogate`, and `oracle_latent_state`.
+- LaTeX/BibTeX rebuilt a 30-page PDF; `C:/Users/wangz/Downloads/75.pdf` SHA256 is `BBAC0390BC96955695BED0FB23BBADA5AB6EAC5BD9233D439B3E2EB81B7250FE`.
+- Hard LaTeX log scan found no overfull boxes, undefined references, undefined citations, rerun warnings, or natbib warnings.
 - `C:/Users/wangz/Desktop/75.pdf` does not exist.
 
-The decisive negative result was reproduced. On `combined_memory_stress`, `action_conditioned_memory` scores 0.440 +/- 0.069 success, while `visible_state_mpc` scores 0.607 +/- 0.047. The paired success difference is -0.167 +/- 0.094, with zero better seeds for the reference method. The proposed method reduces hidden-memory error by 0.369 and improves mechanism macro-F1 by 0.125 versus visible-state MPC, but increases damage: paired damage reduction is -0.298.
+The v5 run is a stronger negative result than v4, not a submission rescue. The method reduces hidden-memory error and removes the catastrophic diagnostic-probe behavior, but it still trails the strongest non-oracle baseline on main success, aggregate hard-regime success, damage, maximum-stress success, and multiple ablation controls. Several ablations match the full v5 method, including no action conditioning, no damage penalty, no material memory, and no safety gate.
 
-The ablation gate also fails. `action_conditioned_no_diagnostic_probes` reaches 0.554 +/- 0.050 success and 0.286 damage, while `action_conditioned_full` reaches 0.375 +/- 0.107 success and 0.554 damage. The mechanism claimed as a strength is the most direct source of harm.
-
-Stress-sweep evidence is unfavorable at every non-oracle level. At maximum stress 1.00, `action_conditioned_memory` reaches 0.321 success and 0.625 damage; `ensemble_uncertainty_planner` reaches 0.375 success and 0.571 damage, and the oracle remains far higher at 0.768 success.
-
-Continuation decision: keep `KILL_ARCHIVE`. Revival would require new experiments that beat visible-state MPC and ensemble baselines on success, damage, and stress robustness without relying on harmful diagnostic probing.
+Continuation decision: keep `KILL_ARCHIVE`. Revival would require a new mechanism that beats damage-aware visible MPC on success and damage under the frozen protocol, then repeats that gain under aggregate hard regimes, fixed-risk budgets, and external or real-robot validation.
